@@ -5,6 +5,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import formalpdf
 import logging
+import pypdfium2.raw as pdfium_c
+import ctypes
 
 
 logging.getLogger("pypdfium2").setLevel(logging.ERROR)
@@ -38,7 +40,7 @@ def process_pdf(pdf_path, output_dir):
             image = pdfium_page.render(scale=scale, may_draw_forms=False).to_pil()
             widgets = page.widgets()
 
-            image_filename = f"{pdf_name}-{page_idx}.png"
+            image_filename = f"{pdf_name}-{page_idx}.jpg"
 
             # Create image info
             image_info = {
@@ -48,19 +50,42 @@ def process_pdf(pdf_path, output_dir):
                     }
 
             # Save image
-            image.save(images_dir / image_filename)
+            image.save(images_dir / image_filename, format="JPEG")
 
             # Process annotations
             annotations = []
             for widget in widgets:
-                # convert bounding box in pt to pixels
-                top = widget.rect.top * scale
-                left = widget.rect.left * scale
-                bottom = widget.rect.bottom * scale
-                right = widget.rect.right * scale
+                # Use pypdfium2's page-to-device coordinate transformation
+                # to properly convert PDF coordinates to image pixel coordinates
+                page_x1, page_y1 = widget.rect.left, widget.rect.bottom
+                page_x2, page_y2 = widget.rect.right, widget.rect.top
 
-                y0 = image.height - top
-                y1 = image.height - bottom
+                # Convert page coordinates to device coordinates
+                # using pypdfium2's FPDF_PageToDevice function
+                dev_x1 = ctypes.c_int()
+                dev_y1 = ctypes.c_int()
+                dev_x2 = ctypes.c_int()
+                dev_y2 = ctypes.c_int()
+
+                # FPDF_PageToDevice(page, start_x, start_y, size_x, size_y, rotate, page_x, page_y, device_x, device_y)
+                pdfium_c.FPDF_PageToDevice(
+                        pdfium_page.raw, 0, 0, image.width, image.height, 0,
+                        page_x1, page_y1, ctypes.byref(dev_x1), ctypes.byref(dev_y1)
+                        )
+                pdfium_c.FPDF_PageToDevice(
+                        pdfium_page.raw, 0, 0, image.width, image.height, 0,
+                        page_x2, page_y2, ctypes.byref(dev_x2), ctypes.byref(dev_y2)
+                        )
+
+                # Convert to Python ints
+                left = float(dev_x1.value)
+                bottom = float(dev_y1.value)
+                right = float(dev_x2.value)
+                top = float(dev_y2.value)
+
+                # Device coordinates have top-left origin, so y values are already correct
+                y0 = min(top, bottom)
+                y1 = max(top, bottom)
 
                 # try for the category, otherwise "Text"
                 categories = { "Text": 0,
@@ -102,11 +127,13 @@ def process_pdf(pdf_path, output_dir):
 
             total_widgets += len(widgets)
 
-        document.document.close()
         return f"Processed {pdf_name}: {num_pages} pages, {total_widgets} widgets"
 
     except Exception as e:
         return f"Error processing {pdf_name}: {str(e)}"
+    
+    finally:
+        document.document.close()
 
 
 def main():

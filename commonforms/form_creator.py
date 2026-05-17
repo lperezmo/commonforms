@@ -63,6 +63,7 @@ class Textbox(AnnotationDictionary):
                 NameObject("/V"): TextStringObject(value or ""),
                 NameObject("/DV"): TextStringObject(default_value or ""),
                 NameObject("/Ff"): NumberObject(0 if not multiline else (1 << 12)),
+                NameObject("/F"): NumberObject(4),
                 NameObject("/Rect"): rect,
                 NameObject("/DA"): TextStringObject("/Helv 0 Tf 0 0 0 rg"),
             }
@@ -88,6 +89,7 @@ class Checkbox(AnnotationDictionary):
                 NameObject("/Subtype"): NameObject("/Widget"),
                 NameObject("/FT"): NameObject("/Btn"),
                 NameObject("/Ff"): NumberObject(0),
+                NameObject("/F"): NumberObject(4),
                 NameObject("/Rect"): rect,
                 NameObject("/V"): pdf_value,
                 NameObject("/AS"): pdf_value,
