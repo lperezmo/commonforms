@@ -6,6 +6,23 @@
 
 ![Pipeline](https://raw.githubusercontent.com/jbarrow/commonforms/main/assets/pipeline.png)
 
+> [!NOTE]
+> **About this fork**
+>
+> Upstream `jbarrow/commonforms` does not publish Docker images. This fork exists
+> only to provide ready-to-use containers, built and pushed automatically by
+> GitHub Actions on every push to `main`.
+>
+> | Image | Use case |
+> |---|---|
+> | [`lperezmo05/commonforms`](https://hub.docker.com/r/lperezmo05/commonforms) | CPU CLI |
+> | [`lperezmo05/commonforms-web`](https://hub.docker.com/r/lperezmo05/commonforms-web) | CPU web GUI |
+> | [`lperezmo05/commonforms-web:gpu`](https://hub.docker.com/r/lperezmo05/commonforms-web/tags) | NVIDIA GPU (run with `--gpus all`) |
+>
+> Everything else (algorithm, models, package code) is upstream. Bug reports about
+> detection quality or the package itself belong on
+> [jbarrow/commonforms](https://github.com/jbarrow/commonforms).
+
 This repo contains three things:
 1. the pip-installable `commonforms` package, which has a CLI and API for converting PDFs into fillable forms
 2. the FFDNet-S and FFDNet-L models from the paper [CommonForms: A Large, Diverse Dataset for Form Field Detection](https://arxiv.org/abs/2509.16506) 
@@ -24,7 +41,7 @@ Once it's installed, you should be able to run the CLI command on ~any PDF.
 
 ## Web GUI (Docker)
 
-A self-hosted web interface is published at [`lperezmo05/commonforms-web`](https://hub.docker.com/r/lperezmo05/commonforms-web). Pull, run, open the URL on your phone over the LAN, drop a PDF, get back a fillable one. FFDNet-L and FFDNet-S weights (both `.pt` and `.onnx`) are baked in, so the container runs fully offline.
+A self-hosted web interface is published at [`lperezmo05/commonforms-web`](https://hub.docker.com/r/lperezmo05/commonforms-web). Pull, run, open the URL on your phone over the LAN, drop a PDF, get back a fillable one. The FFDetr weights (default detector since 0.2.0), plus FFDNet-L and FFDNet-S (both `.pt` and `.onnx`), are baked in, so the container runs fully offline.
 
 ```sh
 docker pull lperezmo05/commonforms-web:latest
@@ -54,9 +71,29 @@ docker run -d --name commonforms-web -p 8000:8000 -v cf-data:/data \
 
 The web UI exposes the same knobs as the CLI: model (`FFDNet-L` / `FFDNet-S`), fast mode, confidence threshold, image size, keep-existing-fields, signature widgets, and multiline text boxes.
 
+### GPU image (NVIDIA)
+
+A CUDA-enabled image is published as [`lperezmo05/commonforms-web:gpu`](https://hub.docker.com/r/lperezmo05/commonforms-web/tags). It uses the `pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime` base, so both FFDetr and FFDNet run on the GPU. The image defaults to `CF_DEVICE=cuda`.
+
+Requires the [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit) on the host. Run with `--gpus all`:
+
+```sh
+docker pull lperezmo05/commonforms-web:gpu
+docker run -d --name commonforms-web --gpus all -p 8000:8000 -v cf-data:/data \
+    lperezmo05/commonforms-web:gpu
+```
+
+The CLI is also installed in the same image (override the entrypoint):
+
+```sh
+docker run --rm --gpus all -v "$PWD:/work" \
+    --entrypoint commonforms lperezmo05/commonforms-web:gpu \
+    /work/input.pdf /work/output.pdf --device cuda
+```
+
 ## Docker
 
-A self-contained image is published at [`lperezmo05/commonforms`](https://hub.docker.com/r/lperezmo05/commonforms) on Docker Hub. The FFDNet-L weights (both `.pt` and `.onnx` for `--fast`) are baked in, so the container runs fully offline once pulled.
+A self-contained image is published at [`lperezmo05/commonforms`](https://hub.docker.com/r/lperezmo05/commonforms) on Docker Hub. FFDetr (the new default detector) plus FFDNet-L weights (both `.pt` and `.onnx` for `--fast`) are baked in, so the container runs fully offline once pulled.
 
 ```sh
 docker pull lperezmo05/commonforms:latest
@@ -82,7 +119,8 @@ docker run --rm -v "${PWD}:/work" lperezmo05/commonforms:latest input.pdf output
 ```
 
 Tags:
-- `latest` and `0.1.6` track the current package version.
+- `latest` and `0.2.1` track the current package version.
+- The web image also publishes `:gpu` and `:0.2.1-gpu` (see the GPU image section above).
 
 ### Building locally
 

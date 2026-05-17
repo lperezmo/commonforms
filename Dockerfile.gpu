@@ -1,4 +1,7 @@
-FROM python:3.11-slim AS base
+# GPU image: PyTorch CUDA runtime + commonforms.
+# Both FFDetr (default since 0.2.0) and FFDNet get full GPU acceleration.
+# Requires NVIDIA Container Toolkit on the host (run with `--gpus all`).
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -8,7 +11,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HF_HUB_DISABLE_TELEMETRY=1 \
     YOLO_CONFIG_DIR=/tmp/Ultralytics \
     MPLCONFIGDIR=/tmp/matplotlib \
-    CF_DATA_DIR=/data
+    CF_DATA_DIR=/data \
+    CF_DEVICE=cuda
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -16,18 +20,16 @@ RUN apt-get update \
         libglib2.0-0 \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --extra-index-url https://download.pytorch.org/whl/cpu \
-        "torch==2.5.1" "torchvision==0.20.1"
-
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY commonforms ./commonforms
 
+# torch is preinstalled in the base image (CUDA 12.1 build). Install the
+# rest of the package and the web stack without touching torch.
 RUN pip install . \
  && pip install "fastapi==0.115.6" "uvicorn[standard]==0.32.1" "python-multipart==0.0.20"
 
-# Pre-download model weights so the container runs fully offline.
-# FFDetr is the default detector since 0.2.0; FFDNet-L/S stay available.
+# Pre-download every model so the container runs fully offline.
 RUN python -c "from huggingface_hub import hf_hub_download; \
 hf_hub_download(repo_id='jbarrow/FFDetr', filename='FFDetr.pth'); \
 hf_hub_download(repo_id='jbarrow/FFDNet-L', filename='FFDNet-L.pt'); \
@@ -40,4 +42,6 @@ COPY web ./web
 RUN mkdir -p /data
 
 EXPOSE 8000
+
+# Default: web server. Override with `--entrypoint commonforms` for CLI use.
 ENTRYPOINT ["uvicorn", "web.server:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,106 @@
+name: Build & push Docker images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "Dockerfile.web"
+      - "Dockerfile.gpu"
+      - "commonforms/**"
+      - "web/**"
+      - "pyproject.toml"
+      - ".github/workflows/docker.yml"
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      v: ${{ steps.read.outputs.v }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        shell: bash
+        run: |
+          v=$(grep -E '^version *= *"' pyproject.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "v=$v" >> "$GITHUB_OUTPUT"
+          echo "package version = $v"
+
+  cpu-cli:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/commonforms:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/commonforms:${{ needs.version.outputs.v }}
+          cache-from: type=gha,scope=cpu-cli
+          cache-to: type=gha,mode=max,scope=cpu-cli
+
+  cpu-web:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.web
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/commonforms-web:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/commonforms-web:${{ needs.version.outputs.v }}
+          cache-from: type=gha,scope=cpu-web
+          cache-to: type=gha,mode=max,scope=cpu-web
+
+  gpu:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free up disk space on the runner
+        # GPU image is ~11 GB. Default ubuntu-latest runners have ~14 GB free on /
+        # which is not enough to assemble it. This action trims tooling we do not
+        # need (Android SDK, .NET, Haskell, etc.) and reclaims ~30 GB.
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: false
+          swap-storage: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.gpu
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/commonforms-web:gpu
+            ${{ secrets.DOCKERHUB_USERNAME }}/commonforms-web:${{ needs.version.outputs.v }}-gpu
+          cache-from: type=gha,scope=gpu
+          cache-to: type=gha,mode=max,scope=gpu

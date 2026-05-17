@@ -26,8 +26,10 @@ COPY commonforms ./commonforms
 RUN pip install .
 
 # Pre-download model weights so the container runs offline.
-# FFDNet-L (.pt) is the CLI default; FFDNet-L (.onnx) covers --fast.
+# FFDetr is the default detector since 0.2.0; FFDNet-L stays available
+# for users who pass --model FFDNet-L (and --fast for the ONNX path).
 RUN python -c "from huggingface_hub import hf_hub_download; \
+hf_hub_download(repo_id='jbarrow/FFDetr', filename='FFDetr.pth'); \
 hf_hub_download(repo_id='jbarrow/FFDNet-L', filename='FFDNet-L.pt'); \
 hf_hub_download(repo_id='jbarrow/FFDNet-L-cpu', filename='FFDNet-L.onnx')"
 
