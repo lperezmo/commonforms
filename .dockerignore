@@ -16,3 +16,5 @@ models
 .python-version
 .DS_Store
 uv.lock
+web/__pycache__
+web/static/__pycache__

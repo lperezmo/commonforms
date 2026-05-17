@@ -22,6 +22,38 @@ uv pip install commonforms
 
 Once it's installed, you should be able to run the CLI command on ~any PDF.
 
+## Web GUI (Docker)
+
+A self-hosted web interface is published at [`lperezmo05/commonforms-web`](https://hub.docker.com/r/lperezmo05/commonforms-web). Pull, run, open the URL on your phone over the LAN, drop a PDF, get back a fillable one. FFDNet-L and FFDNet-S weights (both `.pt` and `.onnx`) are baked in, so the container runs fully offline.
+
+```sh
+docker pull lperezmo05/commonforms-web:latest
+docker run -d --name commonforms-web -p 8000:8000 -v cf-data:/data \
+    lperezmo05/commonforms-web:latest
+```
+
+Then visit `http://<your-host-ip>:8000` from any device on your LAN. Inside the container the server listens on `0.0.0.0:8000`; pick whatever host port you want with `-p HOSTPORT:8000`.
+
+Environment variables:
+
+| Var | Default | Purpose |
+|---|---|---|
+| `CF_AUTH_PASSWORD` | unset | If set, gates the UI behind a shared password (LAN safety) |
+| `CF_MAX_UPLOAD_MB` | `100` | Reject larger uploads |
+| `CF_JOB_TTL_MINUTES` | `60` | Auto-delete uploaded + output PDFs after this |
+| `CF_DEVICE` | `cpu` | Inference device |
+| `CF_DATA_DIR` | `/data` | Where uploads/outputs live (mount a volume here) |
+
+Example with password and a bigger upload limit:
+
+```sh
+docker run -d --name commonforms-web -p 8000:8000 -v cf-data:/data \
+    -e CF_AUTH_PASSWORD=hunter2 -e CF_MAX_UPLOAD_MB=250 \
+    lperezmo05/commonforms-web:latest
+```
+
+The web UI exposes the same knobs as the CLI: model (`FFDNet-L` / `FFDNet-S`), fast mode, confidence threshold, image size, keep-existing-fields, signature widgets, and multiline text boxes.
+
 ## Docker
 
 A self-contained image is published at [`lperezmo05/commonforms`](https://hub.docker.com/r/lperezmo05/commonforms) on Docker Hub. The FFDNet-L weights (both `.pt` and `.onnx` for `--fast`) are baked in, so the container runs fully offline once pulled.
