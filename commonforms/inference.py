@@ -38,7 +38,16 @@ def batch(lst: list, n: int = 8):
 class FFDetrDetector:
     def __init__(self, model_or_path: str, device: int | str = "cpu") -> None:
         self.device = device
-        self.model = RFDETRMedium(pretrain_weights=self.get_model_path(model_or_path))
+        # rfdetr auto-detects via torch.accelerator.current_accelerator(), which
+        # can report cuda on a host with NVIDIA tooling even when the installed
+        # torch wheel is CPU-only. Pass device explicitly so .predict() does not
+        # try to .to("cuda") on a CPU-only torch and crash with
+        # "Torch not compiled with CUDA enabled".
+        device_str = device if isinstance(device, str) else f"cuda:{device}"
+        self.model = RFDETRMedium(
+            pretrain_weights=self.get_model_path(model_or_path),
+            device=device_str,
+        )
 
         self.id_to_cls = {0: "TextBox", 1: "ChoiceButton", 2: "Signature"}
 

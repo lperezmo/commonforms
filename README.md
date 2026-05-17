@@ -1,10 +1,6 @@
 # CommonForms
 
-🪄 Automatically convert a PDF into a fillable form.
-
-[💻 Hosted Models (detect.semanticdocs.org)](https://detect.semanticdocs.org) | [📄 CommonForms Paper](https://arxiv.org/abs/2509.16506) | [🤗 Dataset](https://huggingface.co/datasets/jbarrow/CommonForms) | [🤗 FFDNet-L](https://huggingface.co/jbarrow/FFDNet-L) | [🤗 FFDNet-S](https://huggingface.co/jbarrow/FFDNet-S)
-
-![Pipeline](https://raw.githubusercontent.com/jbarrow/commonforms/main/assets/pipeline.png)
+Automatically convert a PDF into a fillable form.
 
 > [!NOTE]
 > **About this fork**
@@ -22,6 +18,10 @@
 > Everything else (algorithm, models, package code) is upstream. Bug reports about
 > detection quality or the package itself belong on
 > [jbarrow/commonforms](https://github.com/jbarrow/commonforms).
+
+[CommonForms Paper](https://arxiv.org/abs/2509.16506) | [Dataset](https://huggingface.co/datasets/jbarrow/CommonForms) | [FFDNet-L](https://huggingface.co/jbarrow/FFDNet-L) | [FFDNet-S](https://huggingface.co/jbarrow/FFDNet-S)
+
+![Pipeline](https://raw.githubusercontent.com/jbarrow/commonforms/main/assets/pipeline.png)
 
 This repo contains three things:
 1. the pip-installable `commonforms` package, which has a CLI and API for converting PDFs into fillable forms
@@ -176,7 +176,7 @@ All of the above arguments are keyword arguments to the `prepare_form` function.
 
 ## Dataset Prep
 
-🚧 Code for dataset prep exists in the `dataset` folder.
+Code for dataset prep exists in the `dataset` folder.
 
 
 # Citation
