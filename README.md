@@ -22,6 +22,45 @@ uv pip install commonforms
 
 Once it's installed, you should be able to run the CLI command on ~any PDF.
 
+## Docker
+
+A self-contained image is published at [`lperezmo05/commonforms`](https://hub.docker.com/r/lperezmo05/commonforms) on Docker Hub. The FFDNet-L weights (both `.pt` and `.onnx` for `--fast`) are baked in, so the container runs fully offline once pulled.
+
+```sh
+docker pull lperezmo05/commonforms:latest
+```
+
+Mount a directory containing your PDFs and call the CLI exactly like you would on the host. The image's working directory is `/work`:
+
+```sh
+docker run --rm -v "$PWD:/work" lperezmo05/commonforms:latest input.pdf output.pdf
+```
+
+CLI flags work the same way:
+
+```sh
+docker run --rm -v "$PWD:/work" lperezmo05/commonforms:latest \
+    input.pdf output.pdf --fast --confidence 0.4
+```
+
+On Windows PowerShell:
+
+```powershell
+docker run --rm -v "${PWD}:/work" lperezmo05/commonforms:latest input.pdf output.pdf
+```
+
+Tags:
+- `latest` and `0.1.6` track the current package version.
+
+### Building locally
+
+If you want to rebuild from source:
+
+```sh
+docker build -t commonforms .
+docker run --rm -v "$PWD:/work" commonforms input.pdf output.pdf
+```
+
 ## CommonForms CLI
 
 The simplest usage will run inference on your CPU using the default suggested settings:
